@@ -107,11 +107,6 @@ class App():
         self.offButton = Button(self.controls, text="Uit", command=self.turnOff, width=10, state=DISABLED)
         self.offButton.grid(row=0, column=1, pady=(0, 16))
 
-        if self.on:
-            state = NORMAL
-        else:
-            state = DISABLED
-
     def turnOn(self):
         if self.on:
             return
