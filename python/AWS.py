@@ -5,7 +5,7 @@ import serial, threading, sched, time
 class App():
 
     #constructor
-    def __init__(self, port = 'COM5', baudrates = 19200):
+    def __init__(self, port = 'COM3', baudrates = 19200):
 
         self.on = False
 
@@ -13,6 +13,9 @@ class App():
         self.baudrates = baudrates
         self.averageTemp = []
         self.schedular = sched.scheduler(time.time, time.sleep)
+
+        self.temperatuurDrempel = 15
+        self.lichtDrempel = 40
 
         # init een nieuwe TKinter instantie, zet deze in self.root, zodat hij in alle methodes gebruikt kan worden
         self.root = Tk()
@@ -51,6 +54,14 @@ class App():
             Label(self.outputContainer, text="Scherm uitgerold", background='white').grid(row=3, column=0, pady=4)
             self.rolledOut = Entry(self.outputContainer, width=30, state=DISABLED)
             self.rolledOut.grid(row=3, column=1, pady=4)
+
+            Label(self.outputContainer, text="Inrollen scherm bij temperatuur:", background='white').grid(row=4, column=0, pady=4)
+            self.tempVeld = Entry(self.outputContainer, width=30, state=DISABLED)
+            self.tempVeld.grid(row=4, column=1, pady=4)
+
+            Label(self.outputContainer, text="Inrollen scherm bij lichtintensiteit", background='white').grid(row=5, column=0, pady=4)
+            self.lichtVeld = Entry(self.outputContainer, width=30, state=DISABLED)
+            self.lichtVeld.grid(row=5, column=1, pady=4)
 
             Label()
 
@@ -99,11 +110,11 @@ class App():
         self.lightDownButton = Button(self.controls, state=buttonstate, text="Down", command=lambda: self.changeLight('down'), width=10)
         self.lightDownButton.grid(row=4, column=1, pady=(0, 16))
 
-        self.rollUpButton = Button(self.controls, state=buttonstate, text="Rol scherm in", command=lambda: self.roll('up'), width=10)
-        self.rollUpButton.grid(row=5, column=0)
+        #self.rollUpButton = Button(self.controls, state=buttonstate, text="Rol scherm in", command=lambda: self.roll('up'), width=10)
+        #self.rollUpButton.grid(row=5, column=0)
 
-        self.rollDownButton = Button(self.controls, state=buttonstate, text="Rol scherm uit", command=lambda: self.roll('down'), width=10)
-        self.rollDownButton.grid(row=5, column=1)
+        #self.rollDownButton = Button(self.controls, state=buttonstate, text="Rol scherm uit", command=lambda: self.roll('down'), width=10)
+        #self.rollDownButton.grid(row=5, column=1)
 
     def setlayout(self):
 
@@ -148,14 +159,24 @@ class App():
         pass
 
     def changeTemp(self, direction):
+        if direction == "UP":
+            self.temperatuurDrempel += 1
+        elif direction == "DOWN":
+            self.temperatuurDrempel -= 1
         try:
-            self.connection.write(1)
+            pass
+            #self.connection.write(1)
         except:
             pass
 
     def changeLight(self, direction):
+        if direction == "UP":
+            self.lichtDrempel += 1
+        elif direction == "DOWN":
+            self.lichtDrempel -= 1
         try:
-            self.connection.write(2)
+            pass
+            #self.connection.write(2)
         except:
             pass
 
@@ -169,21 +190,32 @@ class App():
             message = self.connection.read()
 
             #Laat de inkomende packets zien in hex-formaat, maar verwijder eerst de input
-            input = int(message.hex(), 16)
+            try:
+                input = int(message.hex(), 16)
 
-            if self.checkinput(input) == 'temp':
-                self.averageTemp.append(self.convertinput(input))
-                # print(self.averageTemp)
-
-                self.tempOut['state'] = NORMAL
-                self.tempOut.delete(0, END)
-                self.tempOut.insert(END, '{0}\n graden'.format(self.convertinput(input)))
-                self.tempOut['state'] = DISABLED
-            elif self.checkinput(input) == 'distance':
-                self.rolledOut['state'] = NORMAL
-                self.rolledOut.delete(0, END)
-                self.rolledOut.insert(END, '{0}\n cm'.format(self.convertinput(input)))
-                self.rolledOut['state'] = DISABLED
+                if self.checkinput(input) == 'temp':
+                    self.averageTemp.append(self.convertinput(input))
+                    # print(self.averageTemp)
+                    self.tempOut['state'] = NORMAL
+                    self.tempOut.delete(0, END)
+                    self.tempOut.insert(END, '{0}\n graden'.format(self.convertinput(input)))
+                    self.tempOut['state'] = DISABLED
+                elif self.checkinput(input) == 'distance':
+                    self.rolledOut['state'] = NORMAL
+                    self.rolledOut.delete(0, END)
+                    self.rolledOut.insert(END, '{0}\n cm'.format(self.convertinput(input)))
+                    self.rolledOut['state'] = DISABLED
+                elif self.checkinput(input) == 'status':
+                    self.rolledOut['state'] = NORMAL
+                    self.rolledOut.delete(0, END)
+                    if self.convertinput(input) == 1:
+                        status = "uitgerold"
+                    elif self.convertinput(input) == 2:
+                        status = "ingerold"
+                    self.rolledOut.insert(END, '{0}'.format(status))
+                    self.rolledOut['state'] = DISABLED
+            except:
+                pass
 
             #update de root
             self.root.update()
@@ -198,6 +230,8 @@ class App():
             return 'distance'
         elif input[0] == 2:
             return 'temp'
+        elif input[0] == 3:
+            return 'status'
 
     def convertinput(self, input):
         input = [i for i in str(input)]
