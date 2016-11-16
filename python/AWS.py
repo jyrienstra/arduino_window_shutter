@@ -1,17 +1,18 @@
 from tkinter import *
 
-import serial, threading
+import serial, threading, sched, time
 
 class App():
 
     #constructor
-    def __init__(self, port = 'COM3', baudrates = 19200):
+    def __init__(self, port = 'COM5', baudrates = 19200):
 
         self.on = False
 
         self.port = port
         self.baudrates = baudrates
-        self.averageTemp = tuple()
+        self.averageTemp = []
+        self.schedular = sched.scheduler(time.time, time.sleep)
 
         # init een nieuwe TKinter instantie, zet deze in self.root, zodat hij in alle methodes gebruikt kan worden
         self.root = Tk()
@@ -36,13 +37,22 @@ class App():
 
             # Tekstveld waar alle output van de arduino terecht komt
             Label(self.outputContainer, text='Temperatuur', background='white').grid(row=0, column=0)
-            self.tempOut = Entry(self.outputContainer, width=30)
+            self.tempOut = Entry(self.outputContainer, width=30, state=DISABLED)
             self.tempOut.grid(row=0, column=1, pady=4)
+
             Label(self.outputContainer, text='Gemiddelde temperatuur', background='white').grid(row=1, column=0)
+            self.averageTempOut = Entry(self.outputContainer, width=30, state=DISABLED)
+            self.averageTempOut.grid(row=1, column=1)
 
             Label(self.outputContainer, text='Lichtsterkte', background='white').grid(row=2, column=0, pady=4)
-            self.lightOut = Entry(self.outputContainer, width=30)
+            self.lightOut = Entry(self.outputContainer, width=30, state=DISABLED)
             self.lightOut.grid(row=2, column=1, pady=4)
+
+            Label(self.outputContainer, text="Scherm uitgerold", background='white').grid(row=3, column=0, pady=4)
+            self.rolledOut = Entry(self.outputContainer, width=30, state=DISABLED)
+            self.rolledOut.grid(row=3, column=1, pady=4)
+
+            Label()
 
             self.initControlButtons(buttonstate)
 
@@ -51,13 +61,15 @@ class App():
                 # throws SeralException
                 self.connection = serial.Serial(self.port, self.baudrates)
 
+
                 # Lees de input vanaf de arduino
                 self.readArduino()
 
-                self.calculateAverage()
             except serial.SerialException:
                 # TODO: create a global notification bar
+                self.tempOut['state'] = NORMAL
                 self.tempOut.insert(END, 'Can\'t connect to port {0}'.format(self.port))
+                self.tempOut['state'] = DISABLED
 
 
         else:
@@ -69,24 +81,29 @@ class App():
             self.initControlButtons(buttonstate)
 
     def initControlButtons(self, buttonstate):
-        self.tempUpButon = Button(self.controls, text='Up', state=buttonstate, command=self.changeTemp('up'), width=10)
+        self.tempUpButon = Button(self.controls, text='Up', state=buttonstate, command=lambda: self.changeTemp('up'), width=10)
         self.tempUpButon.grid(row=2, column=0)
 
         Label(self.controls, text="Temperatuur", background='white').grid(row=3, column=0)
 
-        self.tempDownButton = Button(self.controls, text="Down", state=buttonstate, command=self.changeTemp('down'),
+        self.tempDownButton = Button(self.controls, text="Down", state=buttonstate, command=lambda: self.changeTemp('down'),
                                      width=10)
         self.tempDownButton.grid(row=4, column=0, pady=(0, 16))
 
-        self.lightUpButton = Button(self.controls, text="Up", state=buttonstate, command=self.changeLight('up'),
+        self.lightUpButton = Button(self.controls, text="Up", state=buttonstate, command=lambda: self.changeLight('up'),
                                     width=10)
         self.lightUpButton.grid(row=2, column=1)
 
         Label(self.controls, text="Lichtintensiteit", background='white').grid(row=3, column=1)
 
-        self.lightDownButton = Button(self.controls, state=buttonstate, text="Down", command=self.changeLight('down'),
-                                      width=10)
+        self.lightDownButton = Button(self.controls, state=buttonstate, text="Down", command=lambda: self.changeLight('down'), width=10)
         self.lightDownButton.grid(row=4, column=1, pady=(0, 16))
+
+        self.rollUpButton = Button(self.controls, state=buttonstate, text="Rol scherm in", command=lambda: self.roll('up'), width=10)
+        self.rollUpButton.grid(row=5, column=0)
+
+        self.rollDownButton = Button(self.controls, state=buttonstate, text="Rol scherm uit", command=lambda: self.roll('down'), width=10)
+        self.rollDownButton.grid(row=5, column=1)
 
     def setlayout(self):
 
@@ -115,6 +132,7 @@ class App():
         self.offButton['state'] = NORMAL
         self.onButton['state'] = DISABLED
         self.initEverything()
+        self.roll('down')
 
     def turnOff(self):
         if self.on:
@@ -122,41 +140,84 @@ class App():
             self.offButton['state'] = DISABLED
             self.onButton['state'] = NORMAL
             self.initEverything()
+            self.roll('up')
         return
 
+    def roll(self, direction):
+    #     TODO: send to uart how far
+        pass
+
     def changeTemp(self, direction):
-        print('Temp' + direction)
+        try:
+            self.connection.write(bytes(b'temp:' + direction))
+        except:
+            pass
 
     def changeLight(self, direction):
-        print('Light' + direction)
+        try:
+            self.connection.write(bytes(b'light:' + direction))
+        except:
+            pass
 
     #krijg alle output van de arduino binnen
     # return void
+    # TODO: kijken wanneer rolluik open is; hoe ver hij open is;
     def readArduino(self):
-
         while True and self.connection is not None:
+            self.calculateAverage()
             #lees de inkomende packets
             message = self.connection.read()
 
-            self.averageTemp = self.averageTemp + (int(message.hex()),)
             #Laat de inkomende packets zien in hex-formaat, maar verwijder eerst de input
-            self.tempOut.delete(0, END)
-            self.tempOut.insert(END, '{0}\n'.format(message.hex()))
+            input = int(message.hex(), 16)
+
+            if self.checkinput(input) == 'temp':
+                self.averageTemp.append(self.convertinput(input))
+                # print(self.averageTemp)
+
+                self.tempOut['state'] = NORMAL
+                self.tempOut.delete(0, END)
+                self.tempOut.insert(END, '{0}\n graden'.format(self.convertinput(input)))
+                self.tempOut['state'] = DISABLED
+            elif self.checkinput(input) == 'distance':
+                self.rolledOut['state'] = NORMAL
+                self.rolledOut.delete(0, END)
+                self.rolledOut.insert(END, '{0}\n cm'.format(self.convertinput(input)))
+                self.rolledOut['state'] = DISABLED
 
             #update de root
             self.root.update()
 
+    def sendToArduino(self, type, action):
+        pass
+
+    def checkinput(self, input):
+        input = [int(i) for i in str(input)]
+
+        if input[0] == 1:
+            return 'distance'
+        elif input[0] == 2:
+            return 'temp'
+
+    def convertinput(self, input):
+        input = [i for i in str(input)]
+        del input[0]
+        return int(''.join(input))
+
+
     def calculateAverage(self):
-        if(len(self.averageTemp) > 0):
+        if(len(self.averageTemp) == 5):
             all = 0
             for i in self.averageTemp:
                 all = all + i
-            print(all // len(self.averageTemp))
-            self.averageTemp = tuple()
 
-        threading.Timer(5, self.calculateAverage).start()
+            self.averageTempOut['state'] = NORMAL
+            self.averageTempOut.delete(0, END)
+            self.averageTempOut.insert(END, '{0}\n graden'.format((all // len(self.averageTemp))))
+            self.averageTemp = []
+            self.averageTempOut['state'] = DISABLED
 
 #Nieuwe instantie van app
 
 if __name__ == "__main__":
-    app = App()
+    app = App('COM5')
