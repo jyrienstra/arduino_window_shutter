@@ -59,7 +59,7 @@ class App():
             try:
                 # Connectie met arduino
                 # throws SeralException
-                self.connection = serial.Serial(self.port, self.baudrates)
+                self.connection = serial.Serial(self.port, self.baudrates, timeout=0.5)
 
 
                 # Lees de input vanaf de arduino
@@ -149,13 +149,13 @@ class App():
 
     def changeTemp(self, direction):
         try:
-            self.connection.write(bytes(b'temp:' + direction))
+            self.connection.write(1)
         except:
             pass
 
     def changeLight(self, direction):
         try:
-            self.connection.write(bytes(b'light:' + direction))
+            self.connection.write(2)
         except:
             pass
 
@@ -220,4 +220,4 @@ class App():
 #Nieuwe instantie van app
 
 if __name__ == "__main__":
-    app = App('COM5')
+    app = App('COM3')
