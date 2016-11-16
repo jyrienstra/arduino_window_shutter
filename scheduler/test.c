@@ -18,9 +18,9 @@
 //PB2 = LED1 (ROOD) = uitgerold
 //PB3 = LED2 (GROEN) = ingerold
 //PB4 = LED3 (GEEL) = bezig met uit- of inrollen
-int rood = 2;
-int groen = 3;
-int geel = 4;
+int rood = 3;
+int groen = 4;
+int geel = 5;
 
 //Define variables
 //uint16_t uitgerold_cm = 20; //uitgerolde cm
@@ -80,8 +80,19 @@ void sonoor(){
 //krijg de temperatuur en transmit deze via uart naar python
 void getTemperature(){
 	temperature = getCTemperature(); //get the temperature
-	transmit(temperature); //send the temperature trough uart
+	transmit(concat(2,temperature)); //send the temperature trough uart
 	_delay_ms(1000);
+}
+
+void getStatus(){
+	if(uitgerold==1){
+		transmit(concat(3,1)); //send the temperature trough uart
+		//1 == uitgerold
+	}
+	if(ingerold==1){
+		transmit(concat(3,2)); //send the temperature trough uart
+		//2==ingerold
+	}
 }
 
 //regelt de simulatie van het uitrollen
@@ -165,6 +176,7 @@ int main(){
 	SCH_Add_Task(sonoor, 0, 10);
 	SCH_Add_Task(getTemperature, 0, 10);
 	SCH_Add_Task(lampjes, 0, 10);
+	SCH_Add_Task(getStatus,0,10);
 	//SCH_Add_Task(rolluikRollen, 0, 10);
 	
 	
