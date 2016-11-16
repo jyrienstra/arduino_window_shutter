@@ -21,7 +21,7 @@
 #include <avr/interrupt.h>
 #define F_CPU 16E6
 #include <util/delay.h>
-#include "uart.c"
+#include "../uart/uart.c"
 
 #define HIGH 0x1
 #define LOW 0x0
@@ -52,7 +52,7 @@ volatile uint8_t echo; // a flag
 void init_ports(void)
 {
     DDRB=0xff; // set port B as output
-    PORTB=0x00;
+    PORTB=0xff;
     DDRD |= 1 << 4; // set port D0 as output, D3 as input
 	//PORTD = (1 << 4);
     PORTD = 0x00; // clear bit D0
@@ -75,6 +75,17 @@ void init_ext_int(void)
 }
 
 
+int concat(int x, int y){
+	char str1[20];
+	char str2[20];
+
+	sprintf(str1,"%d",x);
+	sprintf(str2,"%d",y);
+
+	strcat(str1,str2);
+
+	return atoi(str1);
+}
 
 //********** start display ***********
 
@@ -92,6 +103,7 @@ void reset_display()
     sendCommand(0x89);  // activate and set brightness to medium
 }
 
+
 void show_distance(uint16_t cm)
 {
                         /*0*/ /*1*/ /*2*/ /*3*/ /*4*/ /*5*/ /*6*/ /*7*/ /*8*/ /*9*/
@@ -104,7 +116,7 @@ void show_distance(uint16_t cm)
     while (cm > 0 && i < 8) {
         digit = cm % 10;
         ar[i] = digit;
-        cm = cm / 10;
+        cm = cm / 10; // test
         i++;
     }
 
@@ -175,9 +187,10 @@ uint16_t calc_cm(uint16_t counter)
     return (micro_sec / 58.2);
 }
 
+/**
 int main(void)
 {
-    uart_init(); // Initialiseert UART
+	uart_init(); // Initialiseert UART
 	
     uint16_t cm = 0;
     
@@ -188,6 +201,8 @@ int main(void)
 	sei();
     sendCommand(0x89);  // activate and set brightness to medium
     _delay_ms(50);
+	
+	setupADC();
 	
 	while(1) {
 		
@@ -200,13 +215,20 @@ int main(void)
         PORTD &=~ _BV(4); // clear bit D0
         _delay_ms(20); // milli sec, timer1 is read in ISR
         cm = calc_cm(gv_counter);
-		
-	    transmit(cm); // Verstuur het aantal cm via UART
-		
+		int cm_with_key = concat(1, cm);
+		transmit(cm_with_key); // Verstuur het aantal cm via UART
         show_distance(cm);
         _delay_ms(500); // milli sec
+		
+		 //transmit(getAdcValue());
+		 //transmit(getVoltage());
+		 int temperature_with_key = concat(2, getCTemperature());
+		 transmit(temperature_with_key);
+		
+		_delay_ms(500); // milli sec
     }
 }
+**/
 
 ISR (INT1_vect)
 {
