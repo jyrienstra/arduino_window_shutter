@@ -159,26 +159,35 @@ class App():
         pass
 
     def changeTemp(self, direction):
-        if direction == "UP":
+        if direction == "up":
             self.temperatuurDrempel += 1
-        elif direction == "DOWN":
+        elif direction == "down":
             self.temperatuurDrempel -= 1
         try:
             pass
             #self.connection.write(1)
         except:
             pass
+        self.tempVeld['state'] = NORMAL
+        self.tempVeld.delete(0, END)
+        self.tempVeld.insert(END, '{0} graden'.format(self.temperatuurDrempel))
+        self.tempVeld['state'] = DISABLED
 
     def changeLight(self, direction):
-        if direction == "UP":
+        if direction == "up":
             self.lichtDrempel += 1
-        elif direction == "DOWN":
+        elif direction == "down":
             self.lichtDrempel -= 1
         try:
             pass
             #self.connection.write(2)
         except:
             pass
+
+        self.lichtVeld['state'] = NORMAL
+        self.lichtVeld.delete(0, END)
+        self.lichtVeld.insert(END, '{0}% zonneschijn'.format(self.lichtDrempel))
+        self.lichtVeld['state'] = DISABLED
 
     #krijg alle output van de arduino binnen
     # return void
