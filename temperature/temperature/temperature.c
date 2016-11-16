@@ -7,7 +7,7 @@
 
 
 #include <avr/io.h>
-#include "../../uart/uart.c"
+//#include "../../uart/uart.c"
 #include <avr/interrupt.h>
 //adc0 = temperaturepin
 
@@ -15,6 +15,7 @@ uint8_t getAdcValue();
 float getVoltage();
 uint8_t getCTemperature();
 
+/**
 int main(void)
 {
 	uart_init(); //set uart at 19200 baud
@@ -29,7 +30,7 @@ int main(void)
 	   _delay_ms(1000);
     }
 }
-
+**/
 //adc0 = temperaturepin
 void setupADC(){
 	//set AVCC with external capacitor at AREF pin
