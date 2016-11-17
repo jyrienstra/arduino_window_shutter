@@ -13,6 +13,7 @@
 #include <util/delay.h>
 #define UBBRVAL 51
 #include <stdio.h>
+
 // output on USB = PD1 = board pin 1
 // F_OSC = 16 MHz & baud rate = 19.200
 
@@ -38,11 +39,21 @@ void transmit(uint8_t data)
 }
 uint8_t receive()
 {
-	loop_until_bit_is_set(UCSR0A, RXC0);
+	//eindeloze loop gefixt
+	//doet het 9x dan gaat hij weer verder met temperatuur checken etc
+	int i = 0;
+	while ( !(UCSR0A & (1<<RXC0)) ){
+		if(i == 9){
+			return 0;
+		}
+		i++;
+	}
+	return UDR0;
+	//loop_until_bit_is_set(UCSR0A, RXC0);
 	// receive the data
 	//uint8_t data = UDR0;
-	return UDR0;
-}
+	//return UDR0;
+}	
 /************************************************************************/
 /*							EXAMPLES	*/
 /* Example Receive                                                      */
