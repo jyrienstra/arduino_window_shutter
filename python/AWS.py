@@ -79,8 +79,10 @@ class App():
             except serial.SerialException:
                 # TODO: create a global notification bar
                 self.tempOut['state'] = NORMAL
+                self.tempOut.delete(0, END)
                 self.tempOut.insert(END, 'Can\'t connect to port {0}'.format(self.port))
                 self.tempOut['state'] = DISABLED
+                self.initControlButtons(DISABLED)
 
 
         else:
@@ -250,6 +252,7 @@ class App():
 
     def calculateAverage(self):
         if(len(self.averageTemp) == 5):
+            self.connection.write(15)
             all = 0
             for i in self.averageTemp:
                 all = all + i
@@ -263,4 +266,4 @@ class App():
 #Nieuwe instantie van app
 
 if __name__ == "__main__":
-    app = App('COM3')
+    app = App('COM5')
