@@ -1,40 +1,65 @@
 from tkinter import *
 
-import serial, threading, sched, time
+import serial
 
 class App():
 
     #constructor
-    def __init__(self, port = 'COM3', baudrates = 19200):
+    def __init__(self, port='COM3', baudrates=19200):
 
+        """
+        @var {bool} on Laat zien of het programma aan of uit staat.
+        """
         self.on = False
 
+        """
+        var {String} port De poort waar de Serial connectie op loopt. Standaardwaarde is COM3
+        """
         self.port = port
-        self.baudrates = baudrates
-        self.averageTemp = []
-        self.schedular = sched.scheduler(time.time, time.sleep)
 
+        """
+        var {int} boudrates De boudrates waar de Serial connectie op loopt. Standaardwaarde is 19200
+        """
+        self.baudrates = baudrates
+
+        """
+        var {array} averageTemp De lijst met temperaturen waar het gemiddelde over wordt berekend
+        """
+        self.averageTemp = []
+
+        """
+        var {int} temperatuurDrempel De drempel qua temperatuur waarop het scherm in of uitrold. Als deze drempel overschreden wordt rolt het scherm uit, anders in.
+        """
         self.temperatuurDrempel = 15
+
+        """
+        var {int} lichtDrempel De drempel qua lichtfelheid (lux) waarop het scherm in of uitrold. Als deze drempel overschreden wordt rolt het scherm uit, anders in.
+        """
         self.lichtDrempel = 40
 
-        # init een nieuwe TKinter instantie, zet deze in self.root, zodat hij in alle methodes gebruikt kan worden
+        """
+        var {Tk} root Een nieuwe TKinter instantie. Deze vormt de basis voor het hele programma. Alle componenten (teksten, buttons, etc.) worden in deze instantie gezet.
+        """
         self.root = Tk()
 
-        # Zet de titel van de window
+        # Zet de titel van het programma
         self.root.title('Arduino Window Shutter')
 
-        # Zet de layout op de goede plek. Alle containers, inputs, buttons, etc. worden in deze method neergezet
+        # Zet de layout op de goede plek. Er wordt hier nog (nauwelijks) gekeken naar de inhoud, maar de indeling wordt gemaakt in deze functie
         self.setlayout()
-        # maak een nieuwe connectie aan met poort COM3, zodat een verbinding met de arduino mogelijk is
-        # Als er geen arduino is aangesloten, wordt de except clause opgeroepen en wordt er een error laten zien
 
+        # Alle compontente (teksten, entries, buttons, etc.) worden in deze functie neergezet.
         self.initEverything()
 
+        # Begin met het maken van het design.
         self.root.mainloop()
-    # Layout van de window
-    # return void
 
     def initEverything(self):
+        """
+        Alle compontente (teksten, entries, buttons, etc.) worden in deze functie neergezet.
+
+        return {void}
+        """
         if self.on:
             buttonstate = NORMAL
 
@@ -63,13 +88,12 @@ class App():
             self.lichtVeld = Entry(self.outputContainer, width=30, state=DISABLED)
             self.lichtVeld.grid(row=5, column=1, pady=4)
 
-            Label()
-
+            # Zet de knoppen goed. Dit moet in een aparte functie om leesbaarheid te voorkomen.
+            # Tevens hoeft er hierdoor geen codes dubbel geschreven te worden (omdat deze functie in de else-statement ook voorkomt)
             self.initControlButtons(buttonstate)
 
             try:
-                # Connectie met arduino
-                # throws SeralException
+                # Connectie met arduino via Serial
                 self.connection = serial.Serial(self.port, self.baudrates, timeout=0.5)
 
 
@@ -77,10 +101,9 @@ class App():
                 self.readArduino()
 
             except serial.SerialException:
-                # TODO: create a global notification bar
                 self.tempOut['state'] = NORMAL
                 self.tempOut.delete(0, END)
-                self.tempOut.insert(END, 'Can\'t connect to port {0}'.format(self.port))
+                self.tempOut.insert(END, 'Kan niet met poort {0} verbinden'.format(self.port))
                 self.tempOut['state'] = DISABLED
                 self.initControlButtons(DISABLED)
 
@@ -94,33 +117,35 @@ class App():
             self.initControlButtons(buttonstate)
 
     def initControlButtons(self, buttonstate):
-        self.tempUpButon = Button(self.controls, text='Up', state=buttonstate, command=lambda: self.changeTemp('up'), width=10)
+        """
+        Zorgt ervoor dat de knoppen goed staan en in hun goede staat. Deze staat kan NORMAL en DISABLED zijn
+
+        param {const} buttonstate De staat van de buttons. NORMAL: de knoppen zijn actief | DISABLED: de knoppen zijn niet actief
+        return {void}
+        """
+        self.tempUpButon = Button(self.controls, text='Omhoog', state=buttonstate, command=lambda: self.changeTemp('up'), width=10)
         self.tempUpButon.grid(row=2, column=0)
 
         Label(self.controls, text="Temperatuur", background='white').grid(row=3, column=0)
 
-        self.tempDownButton = Button(self.controls, text="Down", state=buttonstate, command=lambda: self.changeTemp('down'),
-                                     width=10)
+        self.tempDownButton = Button(self.controls, text="Naar beneden", state=buttonstate, command=lambda: self.changeTemp('down'), width=10)
         self.tempDownButton.grid(row=4, column=0, pady=(0, 16))
 
-        self.lightUpButton = Button(self.controls, text="Up", state=buttonstate, command=lambda: self.changeLight('up'),
-                                    width=10)
+        self.lightUpButton = Button(self.controls, text="Omhoog", state=buttonstate, command=lambda: self.changeLight('up'),width=10)
         self.lightUpButton.grid(row=2, column=1)
 
         Label(self.controls, text="Lichtintensiteit", background='white').grid(row=3, column=1)
 
-        self.lightDownButton = Button(self.controls, state=buttonstate, text="Down", command=lambda: self.changeLight('down'), width=10)
+        self.lightDownButton = Button(self.controls, state=buttonstate, text="Naar beneden", command=lambda: self.changeLight('down'), width=10)
         self.lightDownButton.grid(row=4, column=1, pady=(0, 16))
-
-        #self.rollUpButton = Button(self.controls, state=buttonstate, text="Rol scherm in", command=lambda: self.roll('up'), width=10)
-        #self.rollUpButton.grid(row=5, column=0)
-
-        #self.rollDownButton = Button(self.controls, state=buttonstate, text="Rol scherm uit", command=lambda: self.roll('down'), width=10)
-        #self.rollDownButton.grid(row=5, column=1)
 
     def setlayout(self):
 
-        # Frame voor de output
+        """
+        Zet de layout op de goede plek. Er wordt hier nog (nauwelijks) gekeken naar de inhoud, maar de indeling wordt gemaakt in deze functie
+
+        return {void}
+        """
         self.outputContainer = Frame(height=5, width=200, background='white', borderwidth=1, relief='groove')
         self.outputContainer.pack(fill=Y, padx=5, pady=5, side=LEFT)
 
@@ -138,6 +163,12 @@ class App():
         self.offButton.grid(row=0, column=1, pady=(0, 16))
 
     def turnOn(self):
+        """
+        Zet het programma aan
+
+        return {void}
+        """
+
         if self.on:
             return
 
@@ -148,6 +179,12 @@ class App():
         self.roll('down')
 
     def turnOff(self):
+        """
+        Zet het programma uit
+
+        return {void}
+        """
+
         if self.on:
             self.on = False
             self.offButton['state'] = DISABLED
@@ -157,51 +194,68 @@ class App():
         return
 
     def roll(self, direction):
-    #     TODO: send to uart how far
+        """
+        Zend naar de module of het zonnescherm in- of uitgerold moet worden
+
+        todo: zend het naar de module via Serial
+        """
         pass
 
     def changeTemp(self, direction):
+        """
+        Pas de temperatuur aan zodat het zonnescherm in- of uitgerold wordt bij een andere temperatuurinstelling
+
+        todo: zend het naar de module via Serial
+        return {void}
+        """
         if direction == "up":
             self.temperatuurDrempel += 1
         elif direction == "down":
             self.temperatuurDrempel -= 1
-        try:
-            pass
-            #self.connection.write(1)
-        except:
-            pass
+
+        #self.connection.write(1)
+
         self.tempVeld['state'] = NORMAL
         self.tempVeld.delete(0, END)
         self.tempVeld.insert(END, '{0} graden'.format(self.temperatuurDrempel))
         self.tempVeld['state'] = DISABLED
 
     def changeLight(self, direction):
+        """
+        Pas de lichtfelheid aan zodat het zonnescherm in- of uitgerold wordt bij een andere instelling
+
+        todo: zend het naar de module via Serial
+        return {void}
+        """
         if direction == "up":
             self.lichtDrempel += 1
         elif direction == "down":
             self.lichtDrempel -= 1
-        try:
-            pass
-            #self.connection.write(2)
-        except:
-            pass
+
+        #self.connection.write(2)
 
         self.lichtVeld['state'] = NORMAL
         self.lichtVeld.delete(0, END)
-        self.lichtVeld.insert(END, '{0}% zonneschijn'.format(self.lichtDrempel))
+        self.lichtVeld.insert(END, '{0} zonnescheid (lux)'.format(self.lichtDrempel))
         self.lichtVeld['state'] = DISABLED
 
     #krijg alle output van de arduino binnen
     # return void
     # TODO: kijken wanneer rolluik open is; hoe ver hij open is;
     def readArduino(self):
+        """
+        Leest in een loop of er iets vanaf de module via Serial komt. Dit gebeurt net zo lang dat self.connection niet None is. Dit gebeurd als de connectie gestopt is.
+        """
         while True and self.connection is not None:
+
+            # bereken de gemiddelde temperatuur
             self.calculateAverage()
-            #lees de inkomende packets
+            # lees de inkomende packet
             message = self.connection.read()
 
             #Laat de inkomende packets zien in hex-formaat, maar verwijder eerst de input
             try:
+                # converteer datgene wat er binnenkomt naar een integer. Dit gebeurt altijd omdat de input eerst naar een hex-formaat geconverteerd wordt.
                 input = int(message.hex(), 16)
 
                 if self.checkinput(input) == 'temp':
@@ -228,13 +282,17 @@ class App():
             except:
                 pass
 
-            #update de root
+            #update de root, zodat het scherm interactief blijft
             self.root.update()
 
-    def sendToArduino(self, type, action):
-        pass
-
     def checkinput(self, input):
+        """
+        Check de input op wat voor waarde deze weergeeft. Er zijn drie mogelijke waarden: 1: afstand van de ultrasonoor | 2: temperatuur | 3: status van het zonnescherm (in- of uitgerold)
+        Deze input komt binnen via Serial
+
+        param {int} input De input vanuit Serial
+        return {String} distance | temp | status
+        """
         input = [int(i) for i in str(input)]
 
         if input[0] == 1:
@@ -245,13 +303,25 @@ class App():
             return 'status'
 
     def convertinput(self, input):
+        """
+        Haal het cijfer weg die laat zien wat voor input het is. (zie checkinput())
+
+        param {int} input De input vanuit Serial
+        return {int} De input vanuit Serial zonder het eerste cijfer
+        """
         input = [i for i in str(input)]
         del input[0]
         return int(''.join(input))
 
 
     def calculateAverage(self):
-        if(len(self.averageTemp) == 5):
+        """
+        Berekent de gemiddelde temperatuur om de 40 seconden. Er wordt gekeken naar de array averageTemp waar elke seconde een nieuwe waarde ingevoegd wordt.
+        Als de lengte van deze array 40 is, zijn er dus 40 seconden verstreken.
+
+        return {void}
+        """
+        if(len(self.averageTemp) == 40):
             self.connection.write(15)
             all = 0
             for i in self.averageTemp:
@@ -263,7 +333,6 @@ class App():
             self.averageTemp = []
             self.averageTempOut['state'] = DISABLED
 
-#Nieuwe instantie van app
-
+# Maak de app
 if __name__ == "__main__":
-    app = App('COM5')
+    app = App('COM3')
